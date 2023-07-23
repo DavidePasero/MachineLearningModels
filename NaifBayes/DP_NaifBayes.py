@@ -6,14 +6,14 @@ class DP_NaifBayes (BaseEstimator, RegressorMixin):
     def __init__ (self):
         self.target_occurrences = {}
         self.feature_occurrences = None
-        self.mapping_target = {}
-        self.mapping_features = []
+        self.target_mapping = {}
+        self.features_mapping = []
 
 
     # For the target classes and each features' classes it creates a mapping
     # between the classes and numbers that are unique for each class
     # of the feature
-    def _create_mapping (self, X, y):
+    def _create_mapping (X, y):
         # Maps the target classes
         mapping_target = {}
         for target in y:
@@ -42,7 +42,7 @@ class DP_NaifBayes (BaseEstimator, RegressorMixin):
         # Max number of classes of the features (excluding the result class)
         max_num_classes = max (num_classes [1 :])
         # Gets a mapping beetwen the different classes of each feature with corresponding numbers
-        self.mapping_target, self.mapping_features = self._create_mapping (X, y)
+        self.target_mapping, self.features_mapping = DP_NaifBayes._create_mapping (X, y)
 
         # Get the target class occurrences
         for target in y:
@@ -64,7 +64,7 @@ class DP_NaifBayes (BaseEstimator, RegressorMixin):
                 # mapping_target [target_classes[i]] = mapping of the target's class
                 # mapping_list [j][feature_class] = mapping of the class we're considering (of the j-th feature)
                 # We're considering the j-th feature
-                self.feature_occurrences [self.mapping_target [y[i]], self.mapping_features [j][feature_class], j] += 1
+                self.feature_occurrences [self.target_mapping [y[i]], self.features_mapping [j][feature_class], j] += 1
 
         return self
     
@@ -75,12 +75,13 @@ class DP_NaifBayes (BaseEstimator, RegressorMixin):
         for t in X:
             prob_target_class = {}
             # For each target class 
-            for target_key, target_mapping in self.mapping_target.items():
+            for target_key, target_mapping in self.target_mapping.items():
                 prob = 1
                 # prob (E|B) for each E multiplied together.
                 # To avoid overflows, we divide by 10 every multiplication we perform.
                 for i, feature in enumerate (t):
-                    prob *= self.feature_occurrences [target_mapping, self.mapping_features [i][feature], i] / 10
+                    # Default value in case test class is not in mapping_features
+                    prob *= self.feature_occurrences [target_mapping, self.features_mapping [i][feature], i] / 10 if feature in self.features_mapping [i] else 1
                 # times the probability of B
                 prob *= self.target_occurrences [target_key] / 10
 
